@@ -108,12 +108,20 @@ python run_downloader.py cristiano -m 50
 
 # Disable stories
 python run_downloader.py cristiano --no-stories
-
-```bash
-python run_downloader.py cristiano -u myusername -p mypassword
 ```
 
-### Toplu (Batch) İndirme
+**⚠️ Güvenlik Uyarısı:** Şifrenizi komut satırında yazmayın! Terminal geçmişinde kalır. Bunun yerine:
+
+```bash
+# Program şifre soracaktır (güvenli yöntem)
+python run_downloader.py cristiano -u myusername
+
+# Veya .env dosyası kullanın
+cp .env.example .env
+# .env dosyasını düzenleyin
+```
+
+### 📦 Toplu (Batch) İndirme
 
 Birden fazla profili otomatik olarak indirmek için:
 

@@ -33,7 +33,8 @@ from advanced import InstagramAPIWrapper
 
 # Flask app initialization
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'instagram-downloader-secret-key-change-in-production'
+# Güvenlik: SECRET_KEY ortam değişkeninden okunmalı
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24).hex()
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max
 app.config['DOWNLOAD_FOLDER'] = Path(__file__).parent / 'static' / 'downloads'
 app.config['UPLOAD_FOLDER'] = Path(__file__).parent / 'static' / 'uploads'
