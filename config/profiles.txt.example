@@ -1,0 +1,13 @@
+# Örnek Profil Listesi - profiles.txt
+# Her satırda bir Instagram kullanıcı adı
+# Yorum satırları '#' ile başlar
+
+# Örnek public profiller
+cristiano
+instagram
+natgeo
+
+# Daha fazla profil ekleyebilirsiniz
+# profile1
+# profile2
+# profile3

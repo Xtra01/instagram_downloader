@@ -1,0 +1,15 @@
+# Instagram Downloader - Konfigürasyon Dosyası
+# Bu dosya otomatik olarak oluşturulur. Gerekirse düzenleyebilirsiniz.
+
+{
+    "base_download_dir": "downloads",
+    "session_file": "session.pickle",
+    "log_dir": "logs",
+    "max_retries": 3,
+    "request_timeout": 30,
+    "min_delay_between_requests": 2,
+    "download_stories": true,
+    "download_highlights": true,
+    "download_reels": true,
+    "media_types": ["photo", "video", "carousel"]
+}

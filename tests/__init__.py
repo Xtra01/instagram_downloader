@@ -1,0 +1,3 @@
+"""
+Instagram Downloader - Test Suite
+"""

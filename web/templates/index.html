@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Downloader - Professional Tool</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+        
+        .download-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .download-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fab fa-instagram text-4xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">Instagram Downloader</h1>
+                        <p class="text-sm opacity-90">Professional Media Downloading Tool</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div id="stats-badge" class="glass-card px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        <span id="total-downloads">0</span> Downloads
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8">
+        
+        <!-- Tabs -->
+        <div class="mb-6">
+            <div class="flex space-x-2 border-b border-gray-200">
+                <button onclick="switchTab('single')" id="tab-single" class="tab-button px-6 py-3 font-semibold border-b-2 border-purple-600 text-purple-600">
+                    <i class="fas fa-user mr-2"></i>Single Profile
+                </button>
+                <button onclick="switchTab('batch')" id="tab-batch" class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-users mr-2"></i>Batch Download
+                </button>
+                <button onclick="switchTab('downloads')" id="tab-downloads" class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-folder-open mr-2"></i>My Downloads
+                </button>
+            </div>
+        </div>
+
+        <!-- Single Profile Tab -->
+        <div id="content-single" class="tab-content">
+            <div class="grid md:grid-cols-2 gap-6">
+                
+                <!-- Download Form -->
+                <div class="glass-card rounded-xl shadow-lg p-6">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                        <i class="fas fa-download mr-2 text-purple-600"></i>
+                        Download Content
+                    </h2>
+                    
+                    <form id="single-download-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-link mr-1"></i>
+                                Instagram Username or URL
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fab fa-instagram"></i>
+                                </span>
+                                <input 
+                                    type="text" 
+                                    id="single-username"
+                                    placeholder="cristiano or https://instagram.com/p/ABC123/" 
+                                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                                    required
+                                >
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Supports: Profile (@username), Post URL, Reel URL, IGTV URL
+                            </p>
+                        </div>
+                        
+                        <div id="max-posts-container">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Maximum Posts (Optional - Profile only)
+                            </label>
+                            <input 
+                                type="number" 
+                                id="single-max-posts"
+                                placeholder="20" 
+                                min="1"
+                                max="200"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-lightbulb mr-1"></i>
+                                Leave empty for all posts. Recommended: 20-50 posts.
+                            </p>
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                        >
+                            <i class="fas fa-download"></i>
+                            <span>Start Download</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Info & Features -->
+                <div class="space-y-4">
+                    <div class="glass-card rounded-xl shadow-lg p-6">
+                        <h3 class="text-lg font-bold mb-4 text-gray-800">
+                            <i class="fas fa-star mr-2 text-blue-500"></i>
+                            Supported Content
+                        </h3>
+                        <ul class="space-y-2 text-gray-600">
+                            <li class="flex items-start">
+                                <i class="fas fa-user text-purple-500 mr-2 mt-1"></i>
+                                <span><strong>Profile:</strong> Download entire profiles</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-image text-blue-500 mr-2 mt-1"></i>
+                                <span><strong>Photos & Videos:</strong> Single or carousel posts</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-film text-red-500 mr-2 mt-1"></i>
+                                <span><strong>Reels:</strong> Download Instagram Reels</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-tv text-orange-500 mr-2 mt-1"></i>
+                                <span><strong>IGTV:</strong> Long-form videos</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-link text-green-500 mr-2 mt-1"></i>
+                                <span><strong>URL Support:</strong> Paste any Instagram URL</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-users text-indigo-500 mr-2 mt-1"></i>
+                                <span><strong>Batch:</strong> Multiple profiles at once</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="glass-card rounded-xl shadow-lg p-6">
+                        <h3 class="text-lg font-bold mb-4 text-gray-800">
+                            <i class="fas fa-shield-alt mr-2 text-yellow-500"></i>
+                            Important Notice
+                        </h3>
+                        <div class="space-y-2 text-sm text-gray-600">
+                            <p>
+                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                                Only public profiles are supported
+                            </p>
+                            <p>
+                                <i class="fas fa-user-lock text-red-500 mr-2"></i>
+                                Private profiles cannot be downloaded
+                            </p>
+                            <p>
+                                <i class="fas fa-gavel text-blue-500 mr-2"></i>
+                                For personal use only - respect Instagram ToS
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card rounded-xl shadow-lg p-6">
+                        <h3 class="text-lg font-bold mb-4 text-gray-800">
+                            <i class="fas fa-tachometer-alt mr-2 text-purple-500"></i>
+                            Usage Limits
+                        </h3>
+                        <div class="space-y-3 text-sm text-gray-600">
+                            <div class="flex items-center justify-between">
+                                <span><i class="fas fa-images mr-2"></i>Posts per profile</span>
+                                <span class="font-bold text-purple-600">50-200</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span><i class="fas fa-users mr-2"></i>Profiles per batch</span>
+                                <span class="font-bold text-purple-600">5-10</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span><i class="fas fa-clock mr-2"></i>Requests/hour</span>
+                                <span class="font-bold text-purple-600">~200</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 border-t pt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Instagram enforces rate limits. Stay within these guidelines to avoid throttling.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Download Tab -->
+        <div id="content-batch" class="tab-content hidden">
+            <div class="glass-card rounded-xl shadow-lg p-6 max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-users mr-2 text-purple-600"></i>
+                    Batch Download
+                </h2>
+                
+                <form id="batch-download-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-link mr-1"></i>
+                            Instagram Usernames or URLs (one per line)
+                        </label>
+                        <textarea 
+                            id="batch-usernames"
+                            rows="8"
+                            placeholder="cristiano&#10;https://instagram.com/instagram/&#10;natgeo&#10;https://instagram.com/barcelona/"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent font-mono"
+                            required
+                        ></textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Mix usernames and profile URLs. One per line.
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Posts per Profile (Optional)
+                        </label>
+                        <input 
+                            type="number" 
+                            id="batch-max-posts"
+                            placeholder="20" 
+                            min="1"
+                            max="200"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Applied to ALL profiles. Recommended: 10-20 for batches.
+                        </p>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                        <i class="fas fa-cloud-download-alt"></i>
+                        <span>Start Batch Download</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Downloads Tab -->
+        <div id="content-downloads" class="tab-content hidden">
+            <div class="glass-card rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-folder-open mr-2 text-purple-600"></i>
+                        Downloaded Profiles
+                    </h2>
+                    <button onclick="refreshDownloads()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div id="downloads-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Downloads will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Jobs Section -->
+        <div id="jobs-section" class="mt-8 hidden">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">
+                <i class="fas fa-tasks mr-2 text-purple-600"></i>
+                Active Downloads
+            </h3>
+            <div id="jobs-list" class="space-y-4">
+                <!-- Jobs will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 z-50"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Global state
+        let activeJobs = new Map();
+        let currentTab = 'single';
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => {
+                el.classList.remove('border-purple-600', 'text-purple-600');
+                el.classList.add('text-gray-500');
+            });
+            
+            // Show selected tab
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            const tabButton = document.getElementById(`tab-${tab}`);
+            tabButton.classList.add('border-purple-600', 'text-purple-600');
+            tabButton.classList.remove('text-gray-500');
+            
+            // Load data if needed
+            if (tab === 'downloads') {
+                refreshDownloads();
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-yellow-500'
+            };
+            
+            toast.className = `${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3`;
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Single download form
+        document.getElementById('single-download-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('single-username').value.trim();
+            const maxPosts = document.getElementById('single-max-posts').value;
+            
+            try {
+                const response = await fetch('/api/download/single', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: username,
+                        max_posts: maxPosts ? parseInt(maxPosts) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast(data.message, 'success');
+                    startJobTracking(data.job_id);
+                    document.getElementById('single-download-form').reset();
+                } else {
+                    showToast(data.error || 'Download failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // Batch download form
+        document.getElementById('batch-download-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usernames = document.getElementById('batch-usernames').value
+                .split('\n')
+                .map(u => u.trim())
+                .filter(u => u.length > 0);
+            
+            const maxPosts = document.getElementById('batch-max-posts').value;
+            
+            if (usernames.length === 0) {
+                showToast('Please enter at least one username', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/download/batch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        profiles: usernames,
+                        max_posts: maxPosts ? parseInt(maxPosts) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast(data.message, 'success');
+                    startJobTracking(data.job_id);
+                    document.getElementById('batch-download-form').reset();
+                } else {
+                    showToast(data.error || 'Batch download failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // Job tracking
+        function startJobTracking(jobId) {
+            if (activeJobs.has(jobId)) return;
+            
+            const jobCard = createJobCard(jobId);
+            document.getElementById('jobs-list').appendChild(jobCard);
+            document.getElementById('jobs-section').classList.remove('hidden');
+            
+            activeJobs.set(jobId, {
+                element: jobCard,
+                interval: setInterval(() => updateJobStatus(jobId), 1000)
+            });
+        }
+
+        function createJobCard(jobId) {
+            const card = document.createElement('div');
+            card.id = `job-${jobId}`;
+            card.className = 'glass-card rounded-lg p-4 shadow';
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-semibold text-gray-800">
+                        <i class="fas fa-spinner fa-spin mr-2 text-purple-600"></i>
+                        <span class="job-profile">Loading...</span>
+                    </h4>
+                    <span class="job-status px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Running</span>
+                </div>
+                
+                <!-- Progress Bar with Percentage -->
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-3 relative overflow-hidden">
+                    <div class="job-progress bg-gradient-to-r from-purple-600 to-violet-600 h-3 rounded-full transition-all duration-300 flex items-center justify-center" style="width: 0%">
+                        <span class="job-percentage text-xs text-white font-bold"></span>
+                    </div>
+                </div>
+                
+                <!-- Detailed Progress Info -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <span class="job-phase">Initializing...</span>
+                        </span>
+                        <span class="text-gray-700 font-medium job-counter">0 / 0</span>
+                    </div>
+                    
+                    <div class="job-details text-xs text-gray-500">
+                        <span class="job-completed">0</span> completed · 
+                        <span class="job-failed">0</span> failed · 
+                        <span class="job-remaining">0</span> remaining
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        async function updateJobStatus(jobId) {
+            try {
+                const response = await fetch(`/api/job/${jobId}`);
+                const job = await response.json();
+                
+                const card = document.getElementById(`job-${jobId}`);
+                if (!card) return;
+                
+                // Update profile name
+                card.querySelector('.job-profile').textContent = job.current_profile || job.profiles[0];
+                
+                // Update progress bar
+                const progressBar = card.querySelector('.job-progress');
+                progressBar.style.width = `${job.progress}%`;
+                card.querySelector('.job-percentage').textContent = `${job.progress}%`;
+                
+                // Update phase
+                const phaseIcons = {
+                    'initializing': 'fa-cog',
+                    'counting': 'fa-calculator',
+                    'downloading': 'fa-download',
+                    'completed': 'fa-check',
+                    'failed': 'fa-times'
+                };
+                const phaseTexts = {
+                    'initializing': 'Initializing...',
+                    'counting': 'Counting items...',
+                    'downloading': 'Downloading...',
+                    'completed': 'Completed',
+                    'failed': 'Failed'
+                };
+                const phaseEl = card.querySelector('.job-phase');
+                phaseEl.innerHTML = `<i class="fas ${phaseIcons[job.phase] || 'fa-info-circle'} mr-1"></i>${phaseTexts[job.phase] || job.phase}`;
+                
+                // Update counters
+                card.querySelector('.job-counter').textContent = `${job.downloaded_items} / ${job.total_items}`;
+                card.querySelector('.job-completed').textContent = job.downloaded_items;
+                card.querySelector('.job-failed').textContent = job.failed_items;
+                card.querySelector('.job-remaining').textContent = job.remaining_items;
+                
+                // Update status badge
+                const statusColors = {
+                    running: 'bg-blue-100 text-blue-800',
+                    completed: 'bg-green-100 text-green-800',
+                    failed: 'bg-red-100 text-red-800',
+                    pending: 'bg-yellow-100 text-yellow-800'
+                };
+                
+                const statusEl = card.querySelector('.job-status');
+                statusEl.className = `job-status px-3 py-1 ${statusColors[job.status] || 'bg-gray-100 text-gray-800'} text-xs rounded-full`;
+                statusEl.textContent = job.status.charAt(0).toUpperCase() + job.status.slice(1);
+                
+                // Stop tracking if completed or failed
+                if (job.status === 'completed' || job.status === 'failed') {
+                    const jobData = activeJobs.get(jobId);
+                    if (jobData) {
+                        clearInterval(jobData.interval);
+                        activeJobs.delete(jobId);
+                        
+                        if (job.status === 'completed') {
+                            showToast(`✅ Download completed: ${job.profiles.join(', ')} - ${job.downloaded_items} items`, 'success');
+                            refreshDownloads();
+                        } else {
+                            showToast(`❌ Download failed: ${job.error_message}`, 'error');
+                        }
+                        
+                        // Remove card after 5 seconds
+                        setTimeout(() => {
+                            card.remove();
+                            if (activeJobs.size === 0) {
+                                document.getElementById('jobs-section').classList.add('hidden');
+                            }
+                        }, 5000);
+                    }
+                }
+                
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error updating job:', error);
+            }
+        }
+
+        // Refresh downloads list
+        async function refreshDownloads() {
+            try {
+                const response = await fetch('/api/profiles/list');
+                const profiles = await response.json();
+                
+                const container = document.getElementById('downloads-list');
+                
+                if (profiles.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-12 text-gray-500">
+                            <i class="fas fa-folder-open text-6xl mb-4 opacity-50"></i>
+                            <p>No downloads yet. Start downloading profiles!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = profiles.map(profile => `
+                    <div class="download-card bg-white rounded-lg shadow p-4 border border-gray-200">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center space-x-2">
+                                <i class="fab fa-instagram text-2xl text-purple-600"></i>
+                                <h4 class="font-bold text-gray-800">${profile.username}</h4>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2 text-sm text-gray-600 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-image w-4 mr-2 text-blue-500"></i>
+                                ${profile.photo_count} Photos
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-video w-4 mr-2 text-red-500"></i>
+                                ${profile.video_count} Videos
+                            </div>
+                        </div>
+                        
+                        <button 
+                            onclick="downloadProfile('${profile.username}')"
+                            class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition text-sm font-semibold"
+                        >
+                            <i class="fas fa-download mr-2"></i>Download ZIP
+                        </button>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                showToast('Failed to load downloads', 'error');
+            }
+        }
+
+        // Download profile as ZIP
+        function downloadProfile(username) {
+            window.location.href = `/api/download/file/${username}`;
+            showToast(`Preparing download for ${username}...`, 'info');
+        }
+
+        // Update stats
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                document.getElementById('total-downloads').textContent = stats.successful_downloads;
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStats();
+            setInterval(updateStats, 10000); // Update every 10 seconds
+            loadLimitsInfo();
+        });
+        
+        // Load and display limits info
+        async function loadLimitsInfo() {
+            try {
+                const response = await fetch('/api/limits');
+                const data = await response.json();
+                console.log('Rate Limits:', data.rate_limits);
+                console.log('Guidelines:', data.usage_guidelines);
+            } catch (error) {
+                console.error('Error loading limits:', error);
+            }
+        }
+    </script>
+    
+    <!-- Footer with Disclaimer -->
+    <footer class="mt-12 py-8 border-t border-gray-200 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="glass-card rounded-xl p-6">
+                <h3 class="text-lg font-bold mb-4 text-gray-800 flex items-center">
+                    <i class="fas fa-balance-scale mr-2 text-purple-600"></i>
+                    Legal Disclaimer & Terms of Use
+                </h3>
+                
+                <div class="space-y-3 text-sm text-gray-600">
+                    <p class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                        <span><strong>Personal Use Only:</strong> This tool is designed for personal, educational, and non-commercial use only.</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-user-shield text-blue-500 mr-2 mt-1"></i>
+                        <span><strong>Respect Privacy:</strong> Only download content you have permission to access. Public profiles only.</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-file-contract text-purple-500 mr-2 mt-1"></i>
+                        <span><strong>Instagram Terms:</strong> Users are responsible for compliance with Instagram's Terms of Service and Community Guidelines.</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-copyright text-orange-500 mr-2 mt-1"></i>
+                        <span><strong>Copyright:</strong> All downloaded content belongs to its original creators. Respect intellectual property rights.</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-shield-alt text-yellow-500 mr-2 mt-1"></i>
+                        <span><strong>No Warranty:</strong> This tool is provided "as is" without any warranty. Use at your own risk.</span>
+                    </p>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            By using this service, you acknowledge that you have read, understood, and agree to abide by these terms. 
+                            Violation of these terms may result in service suspension and potential legal consequences.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center text-gray-500 text-sm">
+                <p>
+                    <i class="fas fa-code mr-1"></i>
+                    Instagram Downloader v1.0 · 
+                    <a href="https://github.com" class="text-purple-600 hover:underline">Open Source</a> · 
+                    <i class="fas fa-heart text-red-500 mx-1"></i> Made with care
+                </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
