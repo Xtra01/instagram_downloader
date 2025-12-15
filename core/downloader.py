@@ -263,13 +263,17 @@ class InstagramDownloader:
                     break
                 
                 try:
+                    # Get thumbnail URL properly
+                    # Use display_url for actual image, not post.url which is the Instagram page URL
+                    thumbnail_url = post.display_url
+                    
                     item = {
                         'shortcode': post.shortcode,
                         'typename': post.typename,
                         'is_video': post.is_video,
-                        'url': post.url,
-                        'thumbnail_url': post.url,  # Instagram thumbnail
-                        'display_url': post.url,
+                        'post_url': post.url,  # Instagram post page URL
+                        'thumbnail_url': thumbnail_url,  # Actual image URL
+                        'display_url': post.display_url,  # High-res image URL
                         'video_url': post.video_url if post.is_video else None,
                         'likes': post.likes,
                         'comments': post.comments,
