@@ -17,7 +17,8 @@ import requests
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
-from flask import Flask, render_template, request, jsonify, send_file
+from urllib.parse import quote
+from flask import Flask, render_template, request, jsonify, send_file, Response
 import zipfile
 
 # Add paths
@@ -503,6 +504,36 @@ def get_job_status(job_id):
     return jsonify(job.to_dict())
 
 
+@app.route('/api/image-proxy')
+def image_proxy():
+    """Proxy Instagram images to bypass CORS"""
+    try:
+        image_url = request.args.get('url')
+        if not image_url:
+            return jsonify({'error': 'URL parameter required'}), 400
+        
+        # Fetch image from Instagram
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.instagram.com/',
+        }
+        response = requests.get(image_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Return image with proper headers
+        return Response(
+            response.content,
+            mimetype=response.headers.get('Content-Type', 'image/jpeg'),
+            headers={
+                'Cache-Control': 'public, max-age=3600',
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+    except Exception as e:
+        logger.error(f"Image proxy error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/preview', methods=['POST'])
 def get_preview():
     """Get preview of profile content with thumbnails"""
@@ -524,6 +555,15 @@ def get_preview():
         preview = downloader.get_profile_preview(username, max_items)
         
         if preview['success']:
+            # Replace thumbnail URLs with proxy URLs
+            for item in preview.get('preview_items', []):
+                if item.get('thumbnail_url'):
+                    original_url = item['thumbnail_url']
+                    item['thumbnail_url'] = f"/api/image-proxy?url={quote(original_url)}"
+                if item.get('display_url'):
+                    original_url = item['display_url']
+                    item['display_url'] = f"/api/image-proxy?url={quote(original_url)}"
+            
             return jsonify(preview)
         else:
             return jsonify({'error': preview.get('error', 'Failed to fetch preview')}), 500

@@ -25,6 +25,22 @@ class InstagramDownloader:
     
     def __init__(self, loader: Instaloader):
         self.loader = loader
+    
+    def _download_url(self, url: str, filepath: Path) -> None:
+        """Helper method to download a URL to a file"""
+        try:
+            response = requests.get(url, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            logger.debug(f"Downloaded: {filepath.name}")
+        except Exception as e:
+            logger.error(f"Failed to download {url}: {e}")
+            raise
         
     def download_profile_picture(self, username: str, download_dir: Path) -> Dict:
         """Download profile picture in HD quality"""
@@ -369,13 +385,12 @@ class InstagramDownloader:
         """Download only selected posts by shortcode"""
         try:
             from instaloader import Post
+            import requests
+            import json
             
             profile_dir = download_dir / username
             posts_dir = profile_dir / "selected_posts"
             posts_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Normalize path to prevent Unicode issues on Windows
-            posts_dir_str = str(posts_dir.resolve())
             
             downloaded = []
             failed = []
@@ -387,8 +402,44 @@ class InstagramDownloader:
                         progress_callback(index, total, shortcode)
                     
                     post = Post.from_shortcode(self.loader.context, shortcode)
-                    # Use normalized path string
-                    self.loader.download_post(post, target=posts_dir_str)
+                    
+                    # Manual download to avoid Instaloader's Unicode path issue on Windows
+                    # Download each media item
+                    media_count = 1
+                    if post.typename == 'GraphSidecar':  # Carousel
+                        for node in post.get_sidecar_nodes():
+                            if node.is_video:
+                                url = node.video_url
+                                ext = '.mp4'
+                            else:
+                                url = node.display_url
+                                ext = '.jpg'
+                            
+                            filename = posts_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC_{media_count}{ext}"
+                            self._download_url(url, filename)
+                            media_count += 1
+                    else:  # Single photo or video
+                        if post.is_video:
+                            url = post.video_url
+                            ext = '.mp4'
+                        else:
+                            url = post.url
+                            ext = '.jpg'
+                        
+                        filename = posts_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC{ext}"
+                        self._download_url(url, filename)
+                    
+                    # Save metadata
+                    metadata_file = posts_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC.json"
+                    with open(metadata_file, 'w', encoding='utf-8') as f:
+                        json.dump({
+                            'shortcode': shortcode,
+                            'caption': post.caption if post.caption else '',
+                            'date': post.date_utc.isoformat(),
+                            'likes': post.likes,
+                            'typename': post.typename
+                        }, f, indent=2, ensure_ascii=False)
+                    
                     downloaded.append(shortcode)
                     logger.info(f"Downloaded {index}/{total}: {shortcode}")
                     time.sleep(0.5)  # Rate limiting
