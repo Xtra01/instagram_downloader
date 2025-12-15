@@ -226,16 +226,34 @@
                 
                 const data = await response.json();
                 
+                console.log('Preview response:', data);  // Debug
+                
                 if (response.ok && data.success) {
+                    if (!data.preview_items || data.preview_items.length === 0) {
+                        showToast('No posts found. Profile may be private or empty.', 'error');
+                        document.getElementById('preview-form').classList.remove('hidden');
+                        return;
+                    }
                     previewData = data;
                     selectedShortcodes.clear();
                     showPreviewModal(data);
                 } else {
-                    showToast(data.error || 'Failed to fetch preview', 'error');
+                    // Show helpful error message
+                    const errorMsg = data.error || 'Failed to fetch preview';
+                    
+                    if (data.needs_login) {
+                        showToast('⚠️ Instagram girişi gerekli! Lütfen terminal\'de "python src/main.py --login" ile giriş yapın.', 'error');
+                    } else if (data.is_private) {
+                        showToast('🔒 ' + errorMsg, 'error');
+                    } else {
+                        showToast(errorMsg, 'error');
+                    }
+                    
                     document.getElementById('preview-form').classList.remove('hidden');
                 }
                 
             } catch (error) {
+                console.error('Preview error:', error);  // Debug
                 showToast('Network error: ' + error.message, 'error');
                 document.getElementById('preview-form').classList.remove('hidden');
             } finally {

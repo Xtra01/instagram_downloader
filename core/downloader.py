@@ -250,12 +250,42 @@ class InstagramDownloader:
         try:
             from instaloader import Profile
             
-            profile = Profile.from_username(self.loader.context, username)
+            # Ensure we're logged in for better rate limits
+            if not self.loader.context.is_logged_in:
+                logger.warning("Not logged in - trying to fetch public profile preview")
+            
+            # Try to load profile
+            try:
+                profile = Profile.from_username(self.loader.context, username)
+            except Exception as profile_error:
+                # If profile fetch fails, provide helpful error
+                error_msg = str(profile_error)
+                if "login" in error_msg.lower():
+                    return {
+                        'success': False,
+                        'error': f"Bu profili görüntülemek için giriş yapmanız gerekiyor. Lütfen önce bir Instagram hesabıyla giriş yapın.",
+                        'needs_login': True
+                    }
+                elif "not found" in error_msg.lower():
+                    return {
+                        'success': False,
+                        'error': f"Kullanıcı '{username}' bulunamadı. Kullanıcı adını kontrol edin."
+                    }
+                else:
+                    raise profile_error
+            
+            # Check if profile is private
+            if profile.is_private and not profile.followed_by_viewer:
+                return {
+                    'success': False,
+                    'error': f"Profil '{username}' gizli. Sadece takipçileri içeriği görebilir.",
+                    'is_private': True
+                }
             
             preview_items = []
             count = 0
             
-            logger.info(f"Fetching preview for {username}, max {max_items} items")
+            logger.info(f"Fetching preview for {username}, max {max_items} items (logged_in: {self.loader.context.is_logged_in})")
             
             # Get posts with thumbnails
             for post in profile.get_posts():
@@ -263,51 +293,71 @@ class InstagramDownloader:
                     break
                 
                 try:
-                    # Get thumbnail URL properly
-                    # Use display_url for actual image, not post.url which is the Instagram page URL
-                    thumbnail_url = post.display_url
+                    # Get thumbnail URL with fallback methods
+                    # Priority: display_url > url_from_media_id
+                    thumbnail_url = None
+                    try:
+                        thumbnail_url = post.display_url
+                    except Exception:
+                        # Fallback: construct URL from shortcode
+                        thumbnail_url = f"https://www.instagram.com/p/{post.shortcode}/media/?size=l"
                     
+                    # Build item with safe access to properties
                     item = {
                         'shortcode': post.shortcode,
-                        'typename': post.typename,
-                        'is_video': post.is_video,
-                        'post_url': post.url,  # Instagram post page URL
-                        'thumbnail_url': thumbnail_url,  # Actual image URL
-                        'display_url': post.display_url,  # High-res image URL
-                        'video_url': post.video_url if post.is_video else None,
-                        'likes': post.likes,
-                        'comments': post.comments,
-                        'caption': post.caption[:200] if post.caption else '',
-                        'date': post.date_utc.isoformat(),
-                        'owner': post.owner_username,
-                        'is_carousel': post.typename == 'GraphSidecar',
-                        'carousel_count': len(list(post.get_sidecar_nodes())) if post.typename == 'GraphSidecar' else 0
+                        'typename': getattr(post, 'typename', 'GraphImage'),
+                        'is_video': getattr(post, 'is_video', False),
+                        'post_url': f"https://www.instagram.com/p/{post.shortcode}/",
+                        'thumbnail_url': thumbnail_url,
+                        'display_url': thumbnail_url,  # Use same URL for consistency
+                        'video_url': getattr(post, 'video_url', None) if getattr(post, 'is_video', False) else None,
+                        'likes': getattr(post, 'likes', 0),
+                        'comments': getattr(post, 'comments', 0),
+                        'caption': (post.caption[:200] if post.caption else '') if hasattr(post, 'caption') else '',
+                        'date': post.date_utc.isoformat() if hasattr(post, 'date_utc') else '',
+                        'owner': getattr(post, 'owner_username', username),
+                        'is_carousel': getattr(post, 'typename', '') == 'GraphSidecar',
+                        'carousel_count': 0  # Simplified for preview
                     }
                     
                     preview_items.append(item)
                     count += 1
+                    logger.debug(f"Added preview item {count}/{max_items}: {post.shortcode}")
                     
                 except Exception as e:
                     logger.error(f"Failed to get preview for post {post.shortcode}: {e}")
                     continue
             
+            logger.info(f"Preview fetched successfully: {len(preview_items)} items for {username}")
+            
             return {
                 'success': True,
                 'username': username,
-                'full_name': profile.full_name,
-                'bio': profile.biography,
-                'profile_pic_url': profile.profile_pic_url,
-                'followers': profile.followers,
-                'following': profile.followees,
-                'total_posts': profile.mediacount,
+                'full_name': getattr(profile, 'full_name', username),
+                'bio': getattr(profile, 'biography', ''),
+                'profile_pic_url': getattr(profile, 'profile_pic_url', ''),
+                'followers': getattr(profile, 'followers', 0),
+                'following': getattr(profile, 'followees', 0),
+                'total_posts': getattr(profile, 'mediacount', 0),
                 'preview_items': preview_items,
                 'preview_count': len(preview_items),
-                'has_more': profile.mediacount > len(preview_items)
+                'has_more': getattr(profile, 'mediacount', 0) > len(preview_items),
+                'is_private': getattr(profile, 'is_private', False)
             }
             
         except Exception as e:
-            logger.error(f"Failed to get preview for {username}: {e}")
-            return {'success': False, 'error': str(e)}
+            error_msg = str(e)
+            logger.error(f"Failed to get preview for {username}: {error_msg}")
+            
+            # Provide helpful error messages
+            if "login" in error_msg.lower() or "private" in error_msg.lower():
+                error_msg = "Bu profil gizli veya giriş yapmanız gerekiyor. Lütfen config.json'da Instagram hesabınızla giriş yapın."
+            elif "not found" in error_msg.lower():
+                error_msg = f"Kullanıcı '{username}' bulunamadı. Kullanıcı adını kontrol edin."
+            elif "rate" in error_msg.lower():
+                error_msg = "Instagram rate limit. Lütfen birkaç dakika bekleyin veya giriş yapın."
+            
+            return {'success': False, 'error': error_msg}
     
     def download_selected_posts(self, username: str, shortcodes: List[str], download_dir: Path) -> Dict:
         """Download only selected posts by shortcode"""
