@@ -240,6 +240,9 @@ class InstagramDownloader:
     def download_single_post(self, shortcode: str, download_dir: Path) -> Dict:
         """Download a single post by shortcode"""
         try:
+            from instaloader import Post
+            import json
+            
             post = Post.from_shortcode(self.loader.context, shortcode)
             username = post.owner_username
             
@@ -247,11 +250,46 @@ class InstagramDownloader:
             post_dir = download_dir / f"{username}_post_{shortcode}"
             post_dir.mkdir(parents=True, exist_ok=True)
             
-            # Normalize path to prevent Unicode issues
-            post_dir_str = str(post_dir.resolve())
+            # Manual download to avoid Instaloader's Unicode path issue
+            media_count = 1
+            if post.typename == 'GraphSidecar':  # Carousel
+                for node in post.get_sidecar_nodes():
+                    if node.is_video:
+                        url = node.video_url
+                        ext = '.mp4'
+                    else:
+                        url = node.display_url
+                        ext = '.jpg'
+                    
+                    filename = post_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC_{media_count}{ext}"
+                    self._download_url(url, filename)
+                    media_count += 1
+            else:  # Single photo or video
+                if post.is_video:
+                    url = post.video_url
+                    ext = '.mp4'
+                else:
+                    url = post.url
+                    ext = '.jpg'
+                
+                filename = post_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC{ext}"
+                self._download_url(url, filename)
             
-            # Download
-            self.loader.download_post(post, target=post_dir_str)
+            # Save metadata
+            metadata_file = post_dir / f"{post.date_utc:%Y-%m-%d_%H-%M-%S}_UTC.json"
+            with open(metadata_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'shortcode': shortcode,
+                    'username': username,
+                    'caption': post.caption if post.caption else '',
+                    'date': post.date_utc.isoformat(),
+                    'likes': post.likes,
+                    'comments': post.comments,
+                    'typename': post.typename,
+                    'is_video': post.is_video
+                }, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Successfully downloaded post {shortcode}")
             
             return {
                 'success': True,

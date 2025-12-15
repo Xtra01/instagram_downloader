@@ -101,6 +101,50 @@
             </div>
         </div>
         
+        <!-- Quick Download Single Post/Reel -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 border-2 border-purple-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">
+                    <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+                    Quick Download - Single Post/Reel
+                </h2>
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Directly download a single post, reel, or IGTV without preview
+                </p>
+                
+                <form id="quick-download-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-link mr-1"></i>
+                            Post/Reel URL
+                        </label>
+                        <div class="relative">
+                            <input type="text" 
+                                   id="quick-url-input" 
+                                   placeholder="https://www.instagram.com/p/DNKzXZMI2hZ/ or /reel/..." 
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring focus:ring-purple-200 transition"
+                                   required>
+                            <i class="fas fa-download absolute right-4 top-4 text-gray-400"></i>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Supports: /p/, /reel/, /tv/ URLs
+                        </p>
+                    </div>
+                    
+                    <button type="submit" 
+                            id="quick-download-btn"
+                            class="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-4 rounded-lg shadow-lg hover:shadow-xl transition">
+                        <i class="fas fa-download mr-2"></i>
+                        Download Now
+                    </button>
+                </form>
+                
+                <!-- Quick Download Status -->
+                <div id="quick-download-status" class="hidden mt-6"></div>
+            </div>
+        </div>
+        
         <!-- My Downloads Section -->
         <div id="downloads" class="max-w-6xl mx-auto mb-12">
             <div class="flex items-center justify-between mb-6">
@@ -555,7 +599,167 @@
             }
         }
         
+        // Quick Download Single Post
+        document.getElementById('quick-download-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('quick-url-input').value.trim();
+            const statusDiv = document.getElementById('quick-download-status');
+            const submitBtn = document.getElementById('quick-download-btn');
+            
+            if (!url) {
+                showToast('Please enter a post URL', 'error');
+                return;
+            }
+            
+            // Validate URL format
+            if (!url.includes('instagram.com') || (!url.includes('/p/') && !url.includes('/reel/') && !url.includes('/tv/'))) {
+                showToast('Invalid URL format. Must be a post, reel, or IGTV URL', 'error');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Downloading...';
+            statusDiv.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="loader mr-4"></div>
+                        <div>
+                            <p class="text-blue-800 font-semibold">Processing your request...</p>
+                            <p class="text-blue-600 text-sm">This may take a moment for videos or carousels</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            statusDiv.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/download/single', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Success feedback
+                    const itemCount = data.download_count || 1;
+                    const itemText = itemCount === 1 ? 'item' : 'items';
+                    
+                    statusDiv.innerHTML = `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 text-2xl mr-4 mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="text-green-800 font-semibold mb-2">
+                                        <i class="fas fa-download mr-1"></i>
+                                        Downloaded ${itemCount} ${itemText} successfully!
+                                    </p>
+                                    <p class="text-green-700 text-sm mb-3">
+                                        <i class="fas fa-folder mr-1"></i>
+                                        Saved to: <code class="bg-green-100 px-2 py-1 rounded">${data.folder_name}</code>
+                                    </p>
+                                    ${data.zip_file ? `
+                                    <button onclick="downloadZip('${data.folder_name}')" 
+                                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                                        <i class="fas fa-file-archive mr-1"></i>
+                                        Download ZIP
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    showToast(`✅ ${itemCount} ${itemText} downloaded successfully!`, 'success');
+                    
+                    // Clear input
+                    document.getElementById('quick-url-input').value = '';
+                    
+                    // Refresh downloads list
+                    setTimeout(refreshDownloads, 1000);
+                    
+                } else {
+                    // Error feedback
+                    const errorMsg = data.error || 'Download failed';
+                    const errorDetails = data.details || '';
+                    
+                    let errorIcon = 'exclamation-triangle';
+                    let errorTitle = 'Download Failed';
+                    let errorColor = 'red';
+                    let helpText = '';
+                    
+                    if (data.needs_login || errorMsg.includes('login') || errorMsg.includes('401')) {
+                        errorIcon = 'lock';
+                        errorTitle = 'Login Required';
+                        errorColor = 'orange';
+                        helpText = `
+                            <div class="mt-3 bg-orange-100 p-3 rounded border border-orange-300">
+                                <p class="text-orange-800 text-sm font-semibold mb-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    To download this content, you need to login:
+                                </p>
+                                <ol class="text-orange-700 text-xs space-y-1 ml-4 list-decimal">
+                                    <li>Open terminal in project folder</li>
+                                    <li>Run: <code class="bg-orange-200 px-1 rounded">python src/main.py --login</code></li>
+                                    <li>Enter your Instagram credentials</li>
+                                    <li>Restart the web server</li>
+                                </ol>
+                            </div>
+                        `;
+                    } else if (data.is_private || errorMsg.includes('private')) {
+                        errorIcon = 'user-lock';
+                        errorTitle = 'Private Account';
+                        helpText = '<p class="text-sm text-gray-600 mt-2">You must follow this account to download their posts.</p>';
+                    } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+                        errorIcon = 'hourglass-half';
+                        errorTitle = 'Rate Limited';
+                        helpText = '<p class="text-sm text-gray-600 mt-2">Instagram is temporarily blocking requests. Please wait a few minutes and try again.</p>';
+                    }
+                    
+                    statusDiv.innerHTML = `
+                        <div class="bg-${errorColor}-50 border border-${errorColor}-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-${errorIcon} text-${errorColor}-500 text-2xl mr-4 mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="text-${errorColor}-800 font-semibold mb-1">${errorTitle}</p>
+                                    <p class="text-${errorColor}-700 text-sm">${errorMsg}</p>
+                                    ${errorDetails ? `<p class="text-${errorColor}-600 text-xs mt-1">${errorDetails}</p>` : ''}
+                                    ${helpText}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    showToast(errorTitle + ': ' + errorMsg, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Quick download error:', error);
+                statusDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-times-circle text-red-500 text-2xl mr-4 mt-1"></i>
+                            <div class="flex-1">
+                                <p class="text-red-800 font-semibold mb-1">Network Error</p>
+                                <p class="text-red-700 text-sm">${error.message}</p>
+                                <p class="text-red-600 text-xs mt-2">Check your internet connection and try again.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                showToast('Network error: ' + error.message, 'error');
+                
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-download mr-2"></i>Download Now';
+            }
+        });
+        
         function downloadZip(folder) {
+
             console.log(`📦 Downloading ZIP for: ${folder}`);
             console.log(`📍 API endpoint: /api/download/zip/${folder}`);
             window.location.href = `/api/download/zip/${folder}`;
