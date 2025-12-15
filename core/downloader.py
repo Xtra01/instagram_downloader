@@ -359,7 +359,7 @@ class InstagramDownloader:
             
             return {'success': False, 'error': error_msg}
     
-    def download_selected_posts(self, username: str, shortcodes: List[str], download_dir: Path) -> Dict:
+    def download_selected_posts(self, username: str, shortcodes: List[str], download_dir: Path, progress_callback=None) -> Dict:
         """Download only selected posts by shortcode"""
         try:
             from instaloader import Post
@@ -370,12 +370,17 @@ class InstagramDownloader:
             
             downloaded = []
             failed = []
+            total = len(shortcodes)
             
-            for shortcode in shortcodes:
+            for index, shortcode in enumerate(shortcodes, 1):
                 try:
+                    if progress_callback:
+                        progress_callback(index, total, shortcode)
+                    
                     post = Post.from_shortcode(self.loader.context, shortcode)
                     self.loader.download_post(post, target=str(posts_dir))
                     downloaded.append(shortcode)
+                    logger.info(f"Downloaded {index}/{total}: {shortcode}")
                     time.sleep(0.5)  # Rate limiting
                 except Exception as e:
                     logger.error(f"Failed to download post {shortcode}: {e}")
@@ -406,14 +411,17 @@ class InstagramDownloader:
         if not download_dir.exists():
             return counts
         
-        # Count files by extension
+        # Count files by extension recursively (fixed)
+        photo_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+        video_extensions = {'.mp4', '.mov', '.avi', '.webm', '.mkv'}
+        
         for file in download_dir.rglob('*'):
-            if file.is_file():
+            if file.is_file() and not file.name.startswith('.'):
                 ext = file.suffix.lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                if ext in photo_extensions:
                     counts['photos'] += 1
                     counts['total'] += 1
-                elif ext in ['.mp4', '.mov', '.avi', '.webm']:
+                elif ext in video_extensions:
                     counts['videos'] += 1
                     counts['total'] += 1
         

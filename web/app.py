@@ -505,8 +505,15 @@ def download_selected():
                 job.status = 'running'
                 job.phase = 'downloading'
                 
+                # Progress callback to update job in real-time
+                def update_progress(current, total, shortcode):
+                    job.downloaded_items = current
+                    job.progress = int((current / total) * 100)
+                    job.current_item_name = shortcode
+                    logger.debug(f"Progress: {current}/{total} ({job.progress}%) - {shortcode}")
+                
                 download_dir = Path("downloads")
-                result = downloader.download_selected_posts(username, shortcodes, download_dir)
+                result = downloader.download_selected_posts(username, shortcodes, download_dir, progress_callback=update_progress)
                 
                 if result['success']:
                     job.downloaded_items = result['downloaded_count']
