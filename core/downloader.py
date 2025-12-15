@@ -179,6 +179,9 @@ class InstagramDownloader:
             failed_count = 0
             posts_info = []
             
+            # Normalize path to prevent Unicode issues
+            posts_dir_str = str(posts_dir.resolve())
+            
             logger.info(f"Downloading posts for {username}: {total_to_download} of {total_available}")
             
             for post in profile.get_posts():
@@ -187,7 +190,7 @@ class InstagramDownloader:
                 
                 try:
                     # Download post
-                    self.loader.download_post(post, target=str(posts_dir))
+                    self.loader.download_post(post, target=posts_dir_str)
                     downloaded_count += 1
                     
                     posts_info.append({
@@ -228,8 +231,11 @@ class InstagramDownloader:
             post_dir = download_dir / f"{username}_post_{shortcode}"
             post_dir.mkdir(parents=True, exist_ok=True)
             
+            # Normalize path to prevent Unicode issues
+            post_dir_str = str(post_dir.resolve())
+            
             # Download
-            self.loader.download_post(post, target=str(post_dir))
+            self.loader.download_post(post, target=post_dir_str)
             
             return {
                 'success': True,
@@ -368,6 +374,9 @@ class InstagramDownloader:
             posts_dir = profile_dir / "selected_posts"
             posts_dir.mkdir(parents=True, exist_ok=True)
             
+            # Normalize path to prevent Unicode issues on Windows
+            posts_dir_str = str(posts_dir.resolve())
+            
             downloaded = []
             failed = []
             total = len(shortcodes)
@@ -378,7 +387,8 @@ class InstagramDownloader:
                         progress_callback(index, total, shortcode)
                     
                     post = Post.from_shortcode(self.loader.context, shortcode)
-                    self.loader.download_post(post, target=str(posts_dir))
+                    # Use normalized path string
+                    self.loader.download_post(post, target=posts_dir_str)
                     downloaded.append(shortcode)
                     logger.info(f"Downloaded {index}/{total}: {shortcode}")
                     time.sleep(0.5)  # Rate limiting
@@ -409,7 +419,10 @@ class InstagramDownloader:
         }
         
         if not download_dir.exists():
+            logger.warning(f"Download directory does not exist: {download_dir}")
             return counts
+        
+        logger.info(f"Counting media in: {download_dir}")
         
         # Count files by extension recursively (fixed)
         photo_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
@@ -425,4 +438,5 @@ class InstagramDownloader:
                     counts['videos'] += 1
                     counts['total'] += 1
         
+        logger.info(f"Count result for {download_dir.name}: {counts['photos']} photos, {counts['videos']} videos")
         return counts

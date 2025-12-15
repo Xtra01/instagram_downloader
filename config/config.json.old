@@ -8,5 +8,9 @@
     "download_stories": true,
     "download_highlights": true,
     "download_reels": true,
-    "media_types": ["photo", "video", "carousel"]
+    "media_types": [
+        "photo",
+        "video",
+        "carousel"
+    ]
 }

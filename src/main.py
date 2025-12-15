@@ -127,7 +127,9 @@ class SessionManager:
             download_geotags=True,
             download_comments=True,
             save_metadata=True,
-            compress_json=False
+            compress_json=False,
+            dirname_pattern="{target}",  # Prevent Instaloader from creating nested paths
+            filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}_UTC"
         )
         
         # Session dosyası varsa yükle

@@ -24,6 +24,8 @@
         .selection-badge { position: absolute; top: 8px; right: 8px; background: #667eea; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-pink-50">
@@ -177,15 +179,24 @@
     
     <!-- Active Downloads Section -->
     <div id="active-downloads-section" class="fixed bottom-4 right-4 w-96 hidden">
-        <div class="bg-white rounded-xl shadow-2xl p-4">
-            <h4 class="font-bold text-gray-800 mb-3 flex items-center justify-between">
-                <span><i class="fas fa-spinner fa-pulse text-purple-600 mr-2"></i>Active Downloads</span>
-                <button onclick="hideActiveDownloads()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </h4>
-            <div id="active-downloads-list" class="space-y-2 max-h-64 overflow-y-auto">
-                <!-- Dynamic content -->
+        <div class="bg-white rounded-xl shadow-2xl">
+            <div class="p-4 cursor-pointer" onclick="toggleActiveDownloads()">
+                <h4 class="font-bold text-gray-800 flex items-center justify-between">
+                    <span><i class="fas fa-spinner fa-pulse text-purple-600 mr-2"></i>Active Downloads</span>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="event.stopPropagation(); minimizeActiveDownloads()" class="text-gray-400 hover:text-gray-600">
+                            <i id="minimize-icon" class="fas fa-chevron-down"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); hideActiveDownloads()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </h4>
+            </div>
+            <div id="active-downloads-content" class="px-4 pb-4">
+                <div id="active-downloads-list" class="space-y-2 max-h-64 overflow-y-auto">
+                    <!-- Dynamic content -->
+                </div>
             </div>
         </div>
     </div>
@@ -425,7 +436,13 @@
                         
                         if (job.status === 'completed') {
                             refreshDownloads();
-                            showToast(`✅ Downloaded ${job.downloaded_items} items!`, 'success');
+                            const itemsText = job.downloaded_items > 0 ? `${job.downloaded_items} items` : 'content';
+                            showToast(`✅ Downloaded ${itemsText} successfully!`, 'success');
+                            
+                            // Show instruction after 2 seconds
+                            setTimeout(() => {
+                                showToast('📦 Scroll down to "My Downloads" and click "Download ZIP" button', 'info');
+                            }, 2000);
                         } else {
                             showToast('Download failed: ' + job.error_message, 'error');
                         }
@@ -471,8 +488,20 @@
         
         async function refreshDownloads() {
             try {
+                console.log('🔄 Refreshing downloads list...');
                 const response = await fetch('/api/profiles/list');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const profiles = await response.json();
+                console.log('✅ API Response:', profiles);
+                
+                // Debug: Log each profile's counts
+                profiles.forEach(p => {
+                    console.log(`📊 ${p.username}: ${p.photo_count} photos, ${p.video_count} videos (Total: ${p.total_count})`);
+                });
                 
                 const container = document.getElementById('downloads-list');
                 
@@ -510,19 +539,25 @@
                         </div>
                         
                         <button onclick="downloadZip('${profile.username}')" 
-                                class="w-full gradient-bg text-white font-semibold py-3 rounded-lg hover:shadow-lg transition">
+                                class="w-full gradient-bg text-white font-semibold py-3 rounded-lg hover:shadow-lg transition transform hover:scale-105 animate-pulse">
                             <i class="fas fa-download mr-2"></i>
                             Download ZIP
                         </button>
                     </div>
                 `).join('');
                 
+                showToast('Downloads refreshed!', 'success');
+                console.log('Downloads list updated successfully');
+                
             } catch (error) {
                 console.error('Refresh error:', error);
+                showToast('Failed to refresh: ' + error.message, 'error');
             }
         }
         
         function downloadZip(folder) {
+            console.log(`📦 Downloading ZIP for: ${folder}`);
+            console.log(`📍 API endpoint: /api/download/zip/${folder}`);
             window.location.href = `/api/download/zip/${folder}`;
             showToast('Preparing download...', 'info');
         }
@@ -538,7 +573,9 @@
             toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>${message}`;
             container.appendChild(toast);
             
-            setTimeout(() => toast.remove(), 3000);
+            // Keep info messages longer (5 seconds), others 3 seconds
+            const duration = type === 'info' ? 5000 : 3000;
+            setTimeout(() => toast.remove(), duration);
         }
         
         function formatNumber(num) {
@@ -547,8 +584,39 @@
             return num;
         }
         
-        // Initialize
-        refreshDownloads();
+        // Active Downloads minimize/maximize
+        let isMinimized = false;
+        
+        function minimizeActiveDownloads() {
+            const content = document.getElementById('active-downloads-content');
+            const icon = document.getElementById('minimize-icon');
+            
+            if (isMinimized) {
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-down';
+                isMinimized = false;
+            } else {
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-up';
+                isMinimized = true;
+            }
+        }
+        
+        function toggleActiveDownloads() {
+            // Click on header to toggle
+            if (!isMinimized) {
+                minimizeActiveDownloads();
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded, initializing...');
+            refreshDownloads();
+            console.log('✅ Initial refresh triggered');
+        });
+        
+        // Refresh every 30 seconds
         setInterval(refreshDownloads, 30000);
         
         // Close modal on escape

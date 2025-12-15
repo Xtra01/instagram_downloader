@@ -26,16 +26,22 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
 
 from main import InstagramDownloaderConfig, SessionManager
 from downloader import InstagramDownloader
+from cleanup_manager import StorageCleanupManager
+from rate_limiter import RateLimiter, rate_limit_decorator
 
 # Flask app initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24).hex()
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
-app.config['DOWNLOAD_FOLDER'] = Path(__file__).parent / 'static' / 'downloads'
+
+# Paths configuration
+BASE_DIR = Path(__file__).parent.parent
+DOWNLOADS_DIR = BASE_DIR / "downloads"
+TEMP_DIR = BASE_DIR / "temp_zips"
 
 # Create folders
-os.makedirs(app.config['DOWNLOAD_FOLDER'], exist_ok=True)
-os.makedirs("downloads", exist_ok=True)
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 # Logging
 logging.basicConfig(
@@ -49,6 +55,17 @@ download_jobs = {}
 session_manager = None
 loader = None
 downloader = None
+
+# Storage cleanup manager (initialized after DOWNLOADS_DIR is defined)
+cleanup_manager = None
+
+# Rate limiter
+rate_limiter = RateLimiter(
+    max_requests_per_minute=int(os.environ.get('RATE_LIMIT_PER_MINUTE', 10)),
+    max_requests_per_hour=int(os.environ.get('RATE_LIMIT_PER_HOUR', 100)),
+    max_downloads_per_day=int(os.environ.get('RATE_LIMIT_PER_DAY', 500)),
+    cooldown_after_ban=int(os.environ.get('BAN_COOLDOWN_SECONDS', 3600))
+)
 
 
 class DownloadJob:
@@ -153,17 +170,49 @@ def parse_instagram_url(url_or_username: str) -> dict:
 
 def initialize_downloader():
     """Initialize Instagram downloader"""
-    global session_manager, loader, downloader
+    global session_manager, loader, downloader, cleanup_manager
     
     try:
         config = InstagramDownloaderConfig()
         session_manager = SessionManager()
         loader = session_manager.load_or_create()
         downloader = InstagramDownloader(loader)
+        
+        # Initialize cleanup manager with DISABLED auto-cleanup (set age to 365 days)
+        cleanup_manager = StorageCleanupManager(
+            download_folder=DOWNLOADS_DIR,
+            max_age_hours=int(os.environ.get('DOWNLOAD_TTL_HOURS', 8760)),  # 365 days default
+            max_storage_mb=int(os.environ.get('MAX_STORAGE_MB', 50000)),  # 50GB default
+            cleanup_interval_seconds=int(os.environ.get('CLEANUP_INTERVAL', 86400))  # Daily check
+        )
+        
+        # DO NOT start automatic cleanup - manual only
+        # cleanup_manager.start_background_cleanup()
+        rate_limiter.start_background_cleanup()
+        
+        logger.info("Initialized downloader (cleanup DISABLED for safety)")
         return True
     except Exception as e:
         logger.error(f"Initialization error: {e}")
         return False
+
+
+def cleanup_old_jobs():
+    """Remove completed jobs older than 1 hour"""
+    global download_jobs
+    now = datetime.now()
+    
+    jobs_to_remove = []
+    for job_id, job in download_jobs.items():
+        if job.status in ['completed', 'failed']:
+            if job.completed_at and (now - job.completed_at).total_seconds() > 3600:
+                jobs_to_remove.append(job_id)
+    
+    for job_id in jobs_to_remove:
+        del download_jobs[job_id]
+        logger.info(f"Removed old job: {job_id}")
+    
+    return len(jobs_to_remove)
 
 
 # ==== DOWNLOAD TASKS ====
@@ -175,7 +224,7 @@ def download_profile_pic_task(job: DownloadJob, username: str):
         job.phase = 'downloading'
         job.total_items = 1
         
-        download_dir = Path("downloads") / username
+        download_dir = DOWNLOADS_DIR / username
         result = downloader.download_profile_picture(username, download_dir)
         
         if result['success']:
@@ -208,7 +257,7 @@ def download_story_task(job: DownloadJob, username: str):
         job.status = 'running'
         job.phase = 'downloading'
         
-        download_dir = Path("downloads") / username
+        download_dir = DOWNLOADS_DIR / username
         result = downloader.download_stories(username, download_dir)
         
         job.total_items = result.get('downloaded', 0) + result.get('failed', 0)
@@ -244,7 +293,7 @@ def download_single_post_task(job: DownloadJob, shortcode: str, content_type: st
         job.phase = 'downloading'
         job.total_items = 1
         
-        download_dir = Path("downloads")
+        download_dir = DOWNLOADS_DIR
         result = downloader.download_single_post(shortcode, download_dir)
         
         if result['success']:
@@ -280,7 +329,7 @@ def download_full_profile_task(job: DownloadJob, username: str, max_posts: int =
         job.status = 'running'
         job.phase = 'initializing'
         
-        download_dir = Path("downloads") / username
+        download_dir = DOWNLOADS_DIR / username
         download_dir.mkdir(parents=True, exist_ok=True)
         
         results = {}
@@ -364,9 +413,13 @@ def index():
 
 
 @app.route('/api/download', methods=['POST'])
+@rate_limit_decorator(rate_limiter, is_download=True)
 def download():
     """Universal download endpoint"""
     try:
+        # Cleanup old jobs periodically
+        cleanup_old_jobs()
+        
         data = request.get_json()
         input_value = data.get('url', '').strip()
         download_type = data.get('type', 'auto')  # auto, profile, post, reel, story, profile_pic
@@ -481,6 +534,7 @@ def get_preview():
 
 
 @app.route('/api/download/selected', methods=['POST'])
+@rate_limit_decorator(rate_limiter, is_download=True)
 def download_selected():
     """Download only selected posts"""
     try:
@@ -563,7 +617,7 @@ def get_all_jobs():
 def list_profiles():
     """List all downloaded profiles with accurate counts"""
     try:
-        downloads_dir = Path("downloads")
+        downloads_dir = DOWNLOADS_DIR
         
         if not downloads_dir.exists():
             return jsonify([])
@@ -604,25 +658,60 @@ def list_profiles():
 def download_zip(folder):
     """Create and download ZIP of a folder"""
     try:
-        folder_path = Path("downloads") / folder
+        # Sanitize folder name
+        folder = folder.replace('..', '').strip('/')
+        folder_path = DOWNLOADS_DIR / folder
         
         if not folder_path.exists():
-            return jsonify({'error': 'Folder not found'}), 404
+            logger.error(f"Folder not found: {folder_path}")
+            return jsonify({'error': f'Folder not found: {folder}'}), 404
         
-        # Create ZIP
-        zip_path = Path(app.config['DOWNLOAD_FOLDER']) / f"{folder}.zip"
+        # Create ZIP in temp directory
+        zip_filename = f"{folder}_{int(time.time())}.zip"
+        zip_path = TEMP_DIR / zip_filename
+        
+        logger.info(f"Creating ZIP: {zip_path} from {folder_path}")
         
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
                     file_path = Path(root) / file
+                    # Use relative path in ZIP
                     arcname = file_path.relative_to(folder_path.parent)
                     zipf.write(file_path, arcname)
+                    logger.info(f"Added to ZIP: {arcname}")
         
-        return send_file(zip_path, as_attachment=True)
+        # Check if ZIP was created
+        if not zip_path.exists():
+            logger.error(f"ZIP file was not created: {zip_path}")
+            return jsonify({'error': 'Failed to create ZIP file'}), 500
+        
+        logger.info(f"ZIP created successfully: {zip_path} ({zip_path.stat().st_size} bytes)")
+        
+        # Send file
+        response = send_file(
+            zip_path, 
+            as_attachment=True,
+            download_name=f"{folder}.zip",
+            mimetype='application/zip'
+        )
+        
+        # Schedule ZIP deletion after 1 minute (cleanup old temp files)
+        def cleanup_temp_zip():
+            try:
+                time.sleep(60)  # Wait 1 minute
+                if zip_path.exists():
+                    zip_path.unlink()
+                    logger.info(f"Cleaned up temp ZIP: {zip_path}")
+            except Exception as e:
+                logger.error(f"Error cleaning temp ZIP: {e}")
+        
+        threading.Thread(target=cleanup_temp_zip, daemon=True).start()
+        
+        return response
         
     except Exception as e:
-        logger.error(f"ZIP download error: {e}")
+        logger.error(f"ZIP download error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -643,6 +732,66 @@ def health_check():
             'accurate_counting'
         ]
     })
+
+
+@app.route('/api/stats/storage', methods=['GET'])
+def storage_stats():
+    """Get storage statistics"""
+    try:
+        stats = cleanup_manager.get_storage_stats()
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/stats/rate-limit', methods=['GET'])
+def rate_limit_stats():
+    """Get rate limiting statistics"""
+    try:
+        # Get client IP
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ',' in ip:
+            ip = ip.split(',')[0].strip()
+        
+        user_stats = rate_limiter.get_stats(ip)
+        global_stats = rate_limiter.get_all_stats()
+        
+        return jsonify({
+            'success': True,
+            'your_stats': user_stats,
+            'global_stats': global_stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/admin/cleanup', methods=['POST'])
+def manual_cleanup():
+    """Manually trigger cleanup (admin only)"""
+    try:
+        # Add authentication here in production
+        result = cleanup_manager.perform_cleanup()
+        job_cleanup_count = cleanup_old_jobs()
+        
+        return jsonify({
+            'success': True,
+            'storage_cleanup': result,
+            'jobs_cleaned': job_cleanup_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 if __name__ == '__main__':
