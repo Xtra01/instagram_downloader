@@ -3,49 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Downloader - Download Photos, Videos, Reels, Stories & IGTV</title>
-    <meta name="description" content="Download Instagram photos, videos, reels, stories, IGTV and profile pictures in HD quality. Fast, free and easy to use.">
+    <title>Instagram Downloader - Preview & Download</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .feature-card {
-            transition: all 0.3s ease;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        }
-        
-        .download-btn {
-            transition: all 0.3s ease;
-        }
-        
-        .download-btn:hover {
-            transform: scale(1.05);
-        }
-        
-        .pulse-animation {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
-        
-        .progress-ring {
-            transition: stroke-dashoffset 0.5s ease;
-        }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .feature-card { transition: all 0.3s ease; }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .preview-item { transition: all 0.2s ease; cursor: pointer; }
+        .preview-item.selected { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); }
+        .preview-item:hover { transform: scale(1.02); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 0; width: 95%; max-width: 1200px; max-height: 90vh; overflow-y: auto; border-radius: 12px; }
+        .thumbnail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        .selection-badge { position: absolute; top: 8px; right: 8px; background: #667eea; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-pink-50">
@@ -57,157 +35,67 @@
                 <div class="flex items-center space-x-3">
                     <i class="fab fa-instagram text-4xl"></i>
                     <div>
-                        <h1 class="text-2xl font-bold">Instagram Downloader</h1>
-                        <p class="text-sm opacity-90">Download Videos, Photos, Reels, Stories & IGTV</p>
+                        <h1 class="text-2xl font-bold">Instagram Downloader v2.0</h1>
+                        <p class="text-sm opacity-90">Preview & Download with Smart Selection</p>
                     </div>
-                </div>
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="#features" class="hover:text-pink-200 transition">Features</a>
-                    <a href="#how-to" class="hover:text-pink-200 transition">How To Use</a>
-                    <a href="#downloads" class="hover:text-pink-200 transition">My Downloads</a>
                 </div>
             </div>
         </div>
     </header>
     
-    <!-- Main Download Section -->
+    <!-- Main Content -->
     <main class="container mx-auto px-4 py-12">
         
         <!-- Download Input Card -->
         <div class="max-w-4xl mx-auto mb-12">
             <div class="bg-white rounded-2xl shadow-2xl p-8">
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">
-                    <i class="fas fa-download text-purple-600 mr-2"></i>
-                    Download Instagram Content
+                    <i class="fas fa-search text-purple-600 mr-2"></i>
+                    Enter Instagram Profile or URL
                 </h2>
                 
-                <!-- Quick Action Buttons -->
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                    <button onclick="setDownloadType('auto')" 
-                            class="download-type-btn p-3 rounded-lg border-2 border-purple-200 hover:border-purple-500 transition text-center active-type">
-                        <i class="fas fa-magic text-purple-600 text-xl mb-1"></i>
-                        <div class="text-xs font-semibold">Auto Detect</div>
-                    </button>
-                    <button onclick="setDownloadType('profile')" 
-                            class="download-type-btn p-3 rounded-lg border-2 border-blue-200 hover:border-blue-500 transition text-center">
-                        <i class="fas fa-user text-blue-600 text-xl mb-1"></i>
-                        <div class="text-xs font-semibold">Profile</div>
-                    </button>
-                    <button onclick="setDownloadType('profile_pic')" 
-                            class="download-type-btn p-3 rounded-lg border-2 border-green-200 hover:border-green-500 transition text-center">
-                        <i class="fas fa-image text-green-600 text-xl mb-1"></i>
-                        <div class="text-xs font-semibold">Profile Pic</div>
-                    </button>
-                    <button onclick="setDownloadType('story')" 
-                            class="download-type-btn p-3 rounded-lg border-2 border-pink-200 hover:border-pink-500 transition text-center">
-                        <i class="fas fa-clock text-pink-600 text-xl mb-1"></i>
-                        <div class="text-xs font-semibold">Stories</div>
-                    </button>
-                    <button onclick="setDownloadType('post')" 
-                            class="download-type-btn p-3 rounded-lg border-2 border-red-200 hover:border-red-500 transition text-center">
-                        <i class="fas fa-photo-video text-red-600 text-xl mb-1"></i>
-                        <div class="text-xs font-semibold">Post/Reel</div>
-                    </button>
-                </div>
-                
-                <!-- Input Form -->
-                <form id="download-form" class="space-y-4">
+                <form id="preview-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-link mr-1"></i>
-                            Instagram URL or Username
+                            Username or Profile URL
                         </label>
                         <div class="relative">
                             <input type="text" 
                                    id="url-input" 
-                                   placeholder="cristiano or https://instagram.com/p/ABC123/" 
+                                   placeholder="cristiano or https://instagram.com/cristiano/" 
                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring focus:ring-purple-200 transition"
                                    required>
                             <i class="fas fa-search absolute right-4 top-4 text-gray-400"></i>
                         </div>
                         <p class="text-xs text-gray-500 mt-1">
                             <i class="fas fa-info-circle mr-1"></i>
-                            Paste profile URL, post URL, reel URL, or just username
+                            Get preview of posts before downloading
                         </p>
                     </div>
                     
-                    <!-- Options (shown for profile downloads) -->
-                    <div id="profile-options" class="space-y-3 hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Max Posts (Optional)</label>
-                                <input type="number" 
-                                       id="max-posts" 
-                                       placeholder="50" 
-                                       min="1" 
-                                       max="500"
-                                       class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 transition">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" id="download-profile-pic" checked class="rounded text-purple-600">
-                                    <span class="text-sm text-gray-700">Include Profile Picture</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" id="download-stories" class="rounded text-purple-600">
-                                    <span class="text-sm text-gray-700">Include Stories (requires login)</span>
-                                </label>
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Preview Items</label>
+                        <select id="max-preview" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 transition">
+                            <option value="25">25 items</option>
+                            <option value="50">50 items</option>
+                            <option value="100">100 items</option>
+                            <option value="200">200 items</option>
+                        </select>
                     </div>
                     
-                    <!-- Download Button -->
                     <button type="submit" 
-                            class="download-btn w-full gradient-bg text-white font-bold py-4 rounded-lg shadow-lg hover:shadow-xl transition">
-                        <i class="fas fa-download mr-2"></i>
-                        Start Download
+                            class="w-full gradient-bg text-white font-bold py-4 rounded-lg shadow-lg hover:shadow-xl transition">
+                        <i class="fas fa-eye mr-2"></i>
+                        Show Preview
                     </button>
                 </form>
                 
                 <!-- Loading State -->
-                <div id="loading-state" class="hidden text-center py-6">
-                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
-                    <p class="mt-3 text-gray-600">Processing your request...</p>
+                <div id="loading-preview" class="hidden text-center py-8">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-gray-600">Fetching preview...</p>
                 </div>
-                
-                <!-- Success State -->
-                <div id="success-state" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div class="flex items-start">
-                        <i class="fas fa-check-circle text-green-500 text-2xl mr-3 mt-1"></i>
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-green-800 mb-1">Download Started!</h3>
-                            <p class="text-sm text-green-700 mb-3">Your download is in progress. Check "Active Downloads" below.</p>
-                            <button onclick="resetForm()" class="text-sm text-green-600 hover:text-green-800 underline">
-                                Start Another Download
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Error State -->
-                <div id="error-state" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div class="flex items-start">
-                        <i class="fas fa-exclamation-circle text-red-500 text-2xl mr-3 mt-1"></i>
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-red-800 mb-1">Error</h3>
-                            <p class="text-sm text-red-700" id="error-message"></p>
-                        </div>
-                        <button onclick="hideError()" class="text-red-400 hover:text-red-600">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Active Downloads Section -->
-        <div id="active-downloads-section" class="max-w-4xl mx-auto mb-12 hidden">
-            <h3 class="text-2xl font-bold text-gray-800 mb-4">
-                <i class="fas fa-spinner fa-pulse text-purple-600 mr-2"></i>
-                Active Downloads
-            </h3>
-            <div id="active-downloads-list" class="space-y-4">
-                <!-- Dynamic content -->
             </div>
         </div>
         
@@ -228,217 +116,272 @@
             </div>
         </div>
         
-        <!-- Features Section -->
-        <div id="features" class="max-w-6xl mx-auto mb-12">
-            <h3 class="text-3xl font-bold text-gray-800 mb-8 text-center">
-                <i class="fas fa-star text-yellow-500 mr-2"></i>
-                Features
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-blue-600">
-                        <i class="fas fa-image"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">Profile Pictures</h4>
-                    <p class="text-gray-600">Download high-quality profile pictures in original resolution</p>
-                </div>
-                
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-pink-600">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">Stories & Highlights</h4>
-                    <p class="text-gray-600">Save stories and highlights before they disappear</p>
-                </div>
-                
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-red-600">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">Reels & Videos</h4>
-                    <p class="text-gray-600">Download reels, IGTV videos and regular posts</p>
-                </div>
-                
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-green-600">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">Fast & Easy</h4>
-                    <p class="text-gray-600">Just paste the URL and download - no registration needed</p>
-                </div>
-                
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-purple-600">
-                        <i class="fas fa-hd-video"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">HD Quality</h4>
-                    <p class="text-gray-600">Original quality photos and videos without compression</p>
-                </div>
-                
-                <div class="feature-card bg-white p-6 rounded-xl shadow-lg">
-                    <div class="text-4xl mb-4 text-orange-600">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-800 mb-2">Safe & Secure</h4>
-                    <p class="text-gray-600">No data collection, completely private downloads</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- How To Use Section -->
-        <div id="how-to" class="max-w-4xl mx-auto mb-12">
-            <h3 class="text-3xl font-bold text-gray-800 mb-8 text-center">
-                <i class="fas fa-question-circle text-blue-500 mr-2"></i>
-                How To Use
-            </h3>
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <div class="space-y-6">
-                    <div class="flex items-start space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 gradient-bg text-white rounded-full flex items-center justify-center font-bold">1</div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-gray-800 mb-1">Open Instagram</h4>
-                            <p class="text-gray-600">Go to Instagram app or website and find the content you want to download</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 gradient-bg text-white rounded-full flex items-center justify-center font-bold">2</div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-gray-800 mb-1">Copy Link or Username</h4>
-                            <p class="text-gray-600">Tap (•••) and select "Copy Link", or just copy the username</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 gradient-bg text-white rounded-full flex items-center justify-center font-bold">3</div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-gray-800 mb-1">Paste and Download</h4>
-                            <p class="text-gray-600">Paste the URL or username here and click "Start Download"</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 gradient-bg text-white rounded-full flex items-center justify-center font-bold">4</div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-gray-800 mb-1">Save to Your Device</h4>
-                            <p class="text-gray-600">Download the ZIP file containing all content</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
     </main>
     
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8 mt-12">
-        <div class="container mx-auto px-4">
-            <div class="text-center">
-                <p class="text-gray-400 mb-2">
-                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                    For personal use only. Respect Instagram Terms of Service and intellectual property rights.
-                </p>
-                <p class="text-gray-500 text-sm">
-                    © 2025 Instagram Downloader. Made with ❤️ by <a href="https://github.com/Xtra01" class="text-purple-400 hover:text-purple-300">Xtra01</a>
-                </p>
-                <p class="text-gray-600 text-xs mt-2">
-                    Not affiliated with Instagram or Meta
-                </p>
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content fade-in">
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center space-x-4">
+                        <img id="modal-profile-pic" src="" alt="" class="w-16 h-16 rounded-full border-2 border-purple-500">
+                        <div>
+                            <h3 id="modal-username" class="text-2xl font-bold text-gray-800"></h3>
+                            <p id="modal-bio" class="text-sm text-gray-600"></p>
+                            <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                                <span><i class="fas fa-images mr-1"></i><span id="modal-total-posts">0</span> posts</span>
+                                <span><i class="fas fa-users mr-1"></i><span id="modal-followers">0</span> followers</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700 text-3xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Selection Controls -->
+                <div class="flex items-center justify-between bg-purple-50 p-4 rounded-lg">
+                    <div class="flex items-center space-x-4">
+                        <button onclick="selectAll()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
+                            <i class="fas fa-check-double mr-1"></i> Select All
+                        </button>
+                        <button onclick="deselectAll()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition text-sm">
+                            <i class="fas fa-times mr-1"></i> Deselect All
+                        </button>
+                        <span class="text-sm font-semibold text-gray-700">
+                            <span id="selected-count">0</span> selected
+                        </span>
+                    </div>
+                    <button onclick="downloadSelected()" id="download-selected-btn" 
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                        <i class="fas fa-download mr-2"></i>
+                        Download Selected
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Preview Grid -->
+            <div id="preview-grid" class="p-6 thumbnail-grid">
+                <!-- Dynamic content -->
+            </div>
+            
+            <!-- Loading More -->
+            <div id="preview-loading" class="hidden p-6 text-center">
+                <div class="loader mx-auto"></div>
+                <p class="text-gray-600 mt-2">Loading more...</p>
             </div>
         </div>
-    </footer>
+    </div>
+    
+    <!-- Active Downloads Section -->
+    <div id="active-downloads-section" class="fixed bottom-4 right-4 w-96 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-4">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center justify-between">
+                <span><i class="fas fa-spinner fa-pulse text-purple-600 mr-2"></i>Active Downloads</span>
+                <button onclick="hideActiveDownloads()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </h4>
+            <div id="active-downloads-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
     
     <script>
-        let currentDownloadType = 'auto';
+        let previewData = null;
+        let selectedShortcodes = new Set();
         let activeJobs = new Set();
         
-        // Set download type
-        function setDownloadType(type) {
-            currentDownloadType = type;
-            
-            // Update UI
-            document.querySelectorAll('.download-type-btn').forEach(btn => {
-                btn.classList.remove('active-type');
-            });
-            event.target.closest('.download-type-btn').classList.add('active-type');
-            
-            // Show/hide profile options
-            const profileOptions = document.getElementById('profile-options');
-            if (type === 'profile') {
-                profileOptions.classList.remove('hidden');
-            } else {
-                profileOptions.classList.add('hidden');
-            }
-            
-            // Update placeholder
-            const input = document.getElementById('url-input');
-            if (type === 'profile_pic') {
-                input.placeholder = 'Enter username (e.g., cristiano)';
-            } else if (type === 'story') {
-                input.placeholder = 'Enter username (e.g., cristiano)';
-            } else if (type === 'post') {
-                input.placeholder = 'Paste post or reel URL';
-            } else {
-                input.placeholder = 'cristiano or https://instagram.com/p/ABC123/';
-            }
-        }
-        
-        // Handle form submission
-        document.getElementById('download-form').addEventListener('submit', async (e) => {
+        // Preview form submission
+        document.getElementById('preview-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const url = document.getElementById('url-input').value.trim();
-            const maxPosts = document.getElementById('max-posts').value;
-            const downloadProfilePic = document.getElementById('download-profile-pic').checked;
-            const downloadStories = document.getElementById('download-stories').checked;
+            const maxPreview = parseInt(document.getElementById('max-preview').value);
             
             if (!url) {
-                showError('Please enter a URL or username');
+                showToast('Please enter a username or URL', 'error');
                 return;
             }
             
             // Show loading
-            document.getElementById('loading-state').classList.remove('hidden');
-            document.getElementById('download-form').classList.add('hidden');
-            hideError();
-            hideSuccess();
+            document.getElementById('loading-preview').classList.remove('hidden');
+            document.getElementById('preview-form').classList.add('hidden');
             
             try {
-                const response = await fetch('/api/download', {
+                const response = await fetch('/api/preview', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         url: url,
-                        type: currentDownloadType,
-                        max_posts: maxPosts ? parseInt(maxPosts) : null,
-                        download_profile_pic: downloadProfilePic,
-                        download_stories: downloadStories
+                        max_items: maxPreview
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    // Show success
-                    showSuccess(data.message);
+                    previewData = data;
+                    selectedShortcodes.clear();
+                    showPreviewModal(data);
+                } else {
+                    showToast(data.error || 'Failed to fetch preview', 'error');
+                    document.getElementById('preview-form').classList.remove('hidden');
+                }
+                
+            } catch (error) {
+                showToast('Network error: ' + error.message, 'error');
+                document.getElementById('preview-form').classList.remove('hidden');
+            } finally {
+                document.getElementById('loading-preview').classList.add('hidden');
+            }
+        });
+        
+        function showPreviewModal(data) {
+            // Populate modal header
+            document.getElementById('modal-profile-pic').src = data.profile_pic_url;
+            document.getElementById('modal-username').textContent = data.username;
+            document.getElementById('modal-bio').textContent = data.bio || 'No bio';
+            document.getElementById('modal-total-posts').textContent = data.total_posts;
+            document.getElementById('modal-followers').textContent = data.followers.toLocaleString();
+            
+            // Populate preview grid
+            const grid = document.getElementById('preview-grid');
+            grid.innerHTML = '';
+            
+            data.preview_items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item relative bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent';
+                div.dataset.shortcode = item.shortcode;
+                div.onclick = () => toggleSelection(item.shortcode);
+                
+                div.innerHTML = `
+                    <div class="relative aspect-square">
+                        <img src="${item.thumbnail_url}" alt="" class="w-full h-full object-cover">
+                        ${item.is_video ? '<i class="fas fa-play-circle absolute top-2 left-2 text-white text-2xl drop-shadow-lg"></i>' : ''}
+                        ${item.is_carousel ? '<i class="fas fa-clone absolute top-2 left-2 text-white text-xl drop-shadow-lg"></i>' : ''}
+                        <div class="selection-badge hidden">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="p-2">
+                        <div class="flex items-center justify-between text-xs text-gray-600">
+                            <span><i class="fas fa-heart mr-1"></i>${formatNumber(item.likes)}</span>
+                            <span><i class="fas fa-comment mr-1"></i>${formatNumber(item.comments)}</span>
+                        </div>
+                        ${item.caption ? `<p class="text-xs text-gray-500 mt-1 truncate">${item.caption.substring(0, 50)}...</p>` : ''}
+                    </div>
+                `;
+                
+                grid.appendChild(div);
+            });
+            
+            // Show modal
+            document.getElementById('preview-modal').classList.add('active');
+            document.getElementById('preview-form').classList.remove('hidden');
+            updateSelectionCount();
+        }
+        
+        function closePreviewModal() {
+            document.getElementById('preview-modal').classList.remove('active');
+            selectedShortcodes.clear();
+        }
+        
+        function toggleSelection(shortcode) {
+            if (selectedShortcodes.has(shortcode)) {
+                selectedShortcodes.delete(shortcode);
+            } else {
+                selectedShortcodes.add(shortcode);
+            }
+            
+            // Update UI
+            const item = document.querySelector(`[data-shortcode="${shortcode}"]`);
+            if (item) {
+                const badge = item.querySelector('.selection-badge');
+                if (selectedShortcodes.has(shortcode)) {
+                    item.classList.add('selected');
+                    badge.classList.remove('hidden');
+                } else {
+                    item.classList.remove('selected');
+                    badge.classList.add('hidden');
+                }
+            }
+            
+            updateSelectionCount();
+        }
+        
+        function selectAll() {
+            if (!previewData) return;
+            
+            previewData.preview_items.forEach(item => {
+                selectedShortcodes.add(item.shortcode);
+                const elem = document.querySelector(`[data-shortcode="${item.shortcode}"]`);
+                if (elem) {
+                    elem.classList.add('selected');
+                    elem.querySelector('.selection-badge').classList.remove('hidden');
+                }
+            });
+            
+            updateSelectionCount();
+        }
+        
+        function deselectAll() {
+            selectedShortcodes.clear();
+            
+            document.querySelectorAll('.preview-item').forEach(item => {
+                item.classList.remove('selected');
+                item.querySelector('.selection-badge').classList.add('hidden');
+            });
+            
+            updateSelectionCount();
+        }
+        
+        function updateSelectionCount() {
+            const count = selectedShortcodes.size;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('download-selected-btn').disabled = count === 0;
+        }
+        
+        async function downloadSelected() {
+            if (selectedShortcodes.size === 0 || !previewData) return;
+            
+            const shortcodeArray = Array.from(selectedShortcodes);
+            
+            try {
+                const response = await fetch('/api/download/selected', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: previewData.username,
+                        shortcodes: shortcodeArray
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(`Downloading ${shortcodeArray.length} items...`, 'success');
+                    closePreviewModal();
                     
                     // Track job
                     activeJobs.add(data.job_id);
                     showActiveDownloads();
                     pollJobStatus(data.job_id);
                 } else {
-                    showError(data.error || 'Download failed');
+                    showToast(data.error || 'Download failed', 'error');
                 }
                 
             } catch (error) {
-                showError('Network error: ' + error.message);
-            } finally {
-                document.getElementById('loading-state').classList.add('hidden');
-                document.getElementById('download-form').classList.remove('hidden');
+                showToast('Network error: ' + error.message, 'error');
             }
-        });
+        }
         
-        // Poll job status
         async function pollJobStatus(jobId) {
             const interval = setInterval(async () => {
                 try {
@@ -452,24 +395,22 @@
                         activeJobs.delete(jobId);
                         
                         if (activeJobs.size === 0) {
-                            hideActiveDownloads();
+                            setTimeout(hideActiveDownloads, 3000);
                         }
                         
                         if (job.status === 'completed') {
                             refreshDownloads();
-                            showToast('Download completed!', 'success');
+                            showToast(`✅ Downloaded ${job.downloaded_items} items!`, 'success');
                         } else {
                             showToast('Download failed: ' + job.error_message, 'error');
                         }
                     }
                 } catch (error) {
                     clearInterval(interval);
-                    console.error('Poll error:', error);
                 }
             }, 1000);
         }
         
-        // Update active download UI
         function updateActiveDownload(job) {
             const container = document.getElementById('active-downloads-list');
             let card = document.getElementById(`job-${job.job_id}`);
@@ -477,54 +418,22 @@
             if (!card) {
                 card = document.createElement('div');
                 card.id = `job-${job.job_id}`;
-                card.className = 'bg-white rounded-lg shadow-lg p-6';
+                card.className = 'bg-purple-50 rounded-lg p-3';
                 container.appendChild(card);
             }
             
             const progress = job.progress || 0;
-            const statusColor = {
-                'running': 'blue',
-                'completed': 'green',
-                'failed': 'red',
-                'pending': 'yellow'
-            }[job.status] || 'gray';
             
             card.innerHTML = `
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <i class="fas fa-${getIconForType(job.job_type)} text-${statusColor}-600 text-2xl"></i>
-                        <div>
-                            <h4 class="font-bold text-gray-800">${job.target}</h4>
-                            <p class="text-sm text-gray-500">${job.job_type}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-2xl font-bold text-${statusColor}-600">${progress}%</div>
-                        <div class="text-xs text-gray-500">${job.phase}</div>
-                    </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-sm text-gray-800">${job.target}</span>
+                    <span class="text-sm font-bold text-purple-600">${progress}%</span>
                 </div>
-                
-                <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-                    <div class="bg-${statusColor}-600 h-3 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div class="bg-purple-600 h-2 rounded-full transition-all" style="width: ${progress}%"></div>
                 </div>
-                
-                <div class="flex justify-between text-sm text-gray-600">
-                    <span>Downloaded: ${job.downloaded_items} / ${job.total_items}</span>
-                    ${job.failed_items > 0 ? `<span class="text-red-600">Failed: ${job.failed_items}</span>` : ''}
-                </div>
+                <div class="text-xs text-gray-600">${job.downloaded_items} / ${job.total_items} items</div>
             `;
-        }
-        
-        function getIconForType(type) {
-            const icons = {
-                'profile': 'user',
-                'profile_pic': 'image',
-                'story': 'clock',
-                'post': 'photo-video',
-                'reel': 'video',
-                'igtv': 'tv'
-            };
-            return icons[type] || 'download';
         }
         
         function showActiveDownloads() {
@@ -535,7 +444,6 @@
             document.getElementById('active-downloads-section').classList.add('hidden');
         }
         
-        // Refresh downloads list
         async function refreshDownloads() {
             try {
                 const response = await fetch('/api/profiles/list');
@@ -548,7 +456,6 @@
                         <div class="col-span-full text-center py-12 text-gray-500">
                             <i class="fas fa-folder-open text-6xl mb-4 opacity-50"></i>
                             <p class="text-lg">No downloads yet</p>
-                            <p class="text-sm">Your downloaded content will appear here</p>
                         </div>
                     `;
                     return;
@@ -590,61 +497,39 @@
             }
         }
         
-        // Download ZIP
-        async function downloadZip(folder) {
+        function downloadZip(folder) {
             window.location.href = `/api/download/zip/${folder}`;
             showToast('Preparing download...', 'info');
         }
         
-        // UI Helpers
-        function showError(message) {
-            document.getElementById('error-message').textContent = message;
-            document.getElementById('error-state').classList.remove('hidden');
-        }
-        
-        function hideError() {
-            document.getElementById('error-state').classList.add('hidden');
-        }
-        
-        function showSuccess(message) {
-            document.getElementById('success-state').querySelector('p').textContent = message;
-            document.getElementById('success-state').classList.remove('hidden');
-        }
-        
-        function hideSuccess() {
-            document.getElementById('success-state').classList.add('hidden');
-        }
-        
-        function resetForm() {
-            document.getElementById('download-form').reset();
-            hideSuccess();
-            hideError();
-        }
-        
-        function showToast(message, type) {
-            // Simple toast implementation
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+            toast.className = `px-6 py-3 rounded-lg shadow-lg text-white fade-in ${
                 type === 'success' ? 'bg-green-500' : 
                 type === 'error' ? 'bg-red-500' : 
                 'bg-blue-500'
-            } animate-fade-in`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
+            }`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>${message}`;
+            container.appendChild(toast);
             
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            setTimeout(() => toast.remove(), 3000);
         }
         
-        // Add active-type styling
-        const style = document.createElement('style');
-        style.textContent = '.active-type { border-color: #9333ea !important; background-color: #f3e8ff; }';
-        document.head.appendChild(style);
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num;
+        }
         
         // Initialize
         refreshDownloads();
-        setInterval(refreshDownloads, 30000); // Auto-refresh every 30s
+        setInterval(refreshDownloads, 30000);
+        
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePreviewModal();
+        });
     </script>
 </body>
 </html>

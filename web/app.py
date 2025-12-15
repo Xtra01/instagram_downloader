@@ -450,6 +450,102 @@ def get_job_status(job_id):
     return jsonify(job.to_dict())
 
 
+@app.route('/api/preview', methods=['POST'])
+def get_preview():
+    """Get preview of profile content with thumbnails"""
+    try:
+        data = request.get_json()
+        input_value = data.get('url', '').strip()
+        max_items = data.get('max_items', 25)
+        
+        if not input_value:
+            return jsonify({'error': 'URL or username is required'}), 400
+        
+        # Parse input
+        parsed = parse_instagram_url(input_value)
+        username = parsed.get('username') or parsed['identifier']
+        
+        logger.info(f"Preview request for {username}, max {max_items} items")
+        
+        # Get preview
+        preview = downloader.get_profile_preview(username, max_items)
+        
+        if preview['success']:
+            return jsonify(preview)
+        else:
+            return jsonify({'error': preview.get('error', 'Failed to fetch preview')}), 500
+            
+    except Exception as e:
+        logger.error(f"Preview error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/download/selected', methods=['POST'])
+def download_selected():
+    """Download only selected posts"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        shortcodes = data.get('shortcodes', [])
+        
+        if not username or not shortcodes:
+            return jsonify({'error': 'Username and shortcodes are required'}), 400
+        
+        logger.info(f"Selected download: {username}, {len(shortcodes)} items")
+        
+        # Create job
+        job_id = str(uuid.uuid4())
+        job = DownloadJob(job_id, 'selected', username)
+        job.total_items = len(shortcodes)
+        download_jobs[job_id] = job
+        
+        # Start download in background
+        def download_selected_task():
+            try:
+                job.status = 'running'
+                job.phase = 'downloading'
+                
+                download_dir = Path("downloads")
+                result = downloader.download_selected_posts(username, shortcodes, download_dir)
+                
+                if result['success']:
+                    job.downloaded_items = result['downloaded_count']
+                    job.failed_items = result['failed_count']
+                    job.progress = 100
+                    job.status = 'completed'
+                    job.phase = 'completed'
+                    job.download_path = result['download_path']
+                    job.results = result
+                else:
+                    job.status = 'failed'
+                    job.phase = 'failed'
+                    job.error_message = result.get('error', 'Unknown error')
+                
+                job.completed_at = datetime.now()
+                logger.info(f"Selected download completed: {result}")
+                
+            except Exception as e:
+                logger.error(f"Selected download failed: {e}")
+                job.status = 'failed'
+                job.phase = 'failed'
+                job.error_message = str(e)
+                job.completed_at = datetime.now()
+        
+        thread = threading.Thread(target=download_selected_task)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': f'Downloading {len(shortcodes)} selected items from {username}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Selected download error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/jobs', methods=['GET'])
 def get_all_jobs():
     """Get all jobs"""

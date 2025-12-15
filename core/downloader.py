@@ -245,6 +245,102 @@ class InstagramDownloader:
             logger.error(f"Failed to download post {shortcode}: {e}")
             return {'success': False, 'error': str(e)}
     
+    def get_profile_preview(self, username: str, max_items: int = 25) -> Dict:
+        """Get preview of profile content with thumbnails (no download)"""
+        try:
+            from instaloader import Profile
+            
+            profile = Profile.from_username(self.loader.context, username)
+            
+            preview_items = []
+            count = 0
+            
+            logger.info(f"Fetching preview for {username}, max {max_items} items")
+            
+            # Get posts with thumbnails
+            for post in profile.get_posts():
+                if count >= max_items:
+                    break
+                
+                try:
+                    item = {
+                        'shortcode': post.shortcode,
+                        'typename': post.typename,
+                        'is_video': post.is_video,
+                        'url': post.url,
+                        'thumbnail_url': post.url,  # Instagram thumbnail
+                        'display_url': post.url,
+                        'video_url': post.video_url if post.is_video else None,
+                        'likes': post.likes,
+                        'comments': post.comments,
+                        'caption': post.caption[:200] if post.caption else '',
+                        'date': post.date_utc.isoformat(),
+                        'owner': post.owner_username,
+                        'is_carousel': post.typename == 'GraphSidecar',
+                        'carousel_count': len(list(post.get_sidecar_nodes())) if post.typename == 'GraphSidecar' else 0
+                    }
+                    
+                    preview_items.append(item)
+                    count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to get preview for post {post.shortcode}: {e}")
+                    continue
+            
+            return {
+                'success': True,
+                'username': username,
+                'full_name': profile.full_name,
+                'bio': profile.biography,
+                'profile_pic_url': profile.profile_pic_url,
+                'followers': profile.followers,
+                'following': profile.followees,
+                'total_posts': profile.mediacount,
+                'preview_items': preview_items,
+                'preview_count': len(preview_items),
+                'has_more': profile.mediacount > len(preview_items)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get preview for {username}: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def download_selected_posts(self, username: str, shortcodes: List[str], download_dir: Path) -> Dict:
+        """Download only selected posts by shortcode"""
+        try:
+            from instaloader import Post
+            
+            profile_dir = download_dir / username
+            posts_dir = profile_dir / "selected_posts"
+            posts_dir.mkdir(parents=True, exist_ok=True)
+            
+            downloaded = []
+            failed = []
+            
+            for shortcode in shortcodes:
+                try:
+                    post = Post.from_shortcode(self.loader.context, shortcode)
+                    self.loader.download_post(post, target=str(posts_dir))
+                    downloaded.append(shortcode)
+                    time.sleep(0.5)  # Rate limiting
+                except Exception as e:
+                    logger.error(f"Failed to download post {shortcode}: {e}")
+                    failed.append({'shortcode': shortcode, 'error': str(e)})
+            
+            return {
+                'success': True,
+                'username': username,
+                'downloaded': downloaded,
+                'downloaded_count': len(downloaded),
+                'failed': failed,
+                'failed_count': len(failed),
+                'download_path': str(posts_dir)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to download selected posts for {username}: {e}")
+            return {'success': False, 'error': str(e)}
+    
     def count_downloaded_media(self, download_dir: Path) -> Dict:
         """Count all downloaded media files in a directory"""
         counts = {
